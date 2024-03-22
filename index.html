@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Serial Communication</title>
+</head>
+
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+
+<body>
+    <button>Search</button>
+    <div id="receivedData"></div>
+    <div id="myChart" style="width:100%; max-width:600px; height:500px;"></div>
+    <script>
+        var NORDIC_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        var NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+
+        button = document.querySelector('button');
+        button.addEventListener('pointerup', function (event) {
+            navigator.bluetooth.requestDevice({
+                filters: [{ services: [NORDIC_SERVICE] }],
+                acceptAllDevices: false // Set to false to apply filters
+            })
+                .then(device => {
+                    // Human-readable name of the device.
+                    console.log(device.name);
+
+                    // Attempts to connect to remote GATT Server.
+                    return device.gatt.connect();
+                })
+                .then(server => {
+                    // Once connected to the server, you can get the primary service(s)
+                    // and characteristic(s) to listen for data.
+                    return server.getPrimaryService(NORDIC_SERVICE);
+                })
+                .then(service => {
+                    // Get the characteristic you want to listen to.
+                    return service.getCharacteristic(NORDIC_RX);
+                })
+                .then(characteristic => {
+                    // Set up event listener for characteristic value changes.
+                    characteristic.addEventListener('characteristicvaluechanged', event => {
+                        // Handle incoming data here.
+                        var value = event.target.value;
+                        var stringValue = new TextDecoder().decode(value);
+
+                        if (stringValue.includes("BPM:")) {
+                            var bpmRegex = /BPM:\s*(\d+)/;
+                            var match = stringValue.match(bpmRegex);
+                            if (match && match.length > 1) {
+                                var bpmValue = match[1];
+                                console.log("BPM value:", bpmValue);
+                                document.getElementById('receivedData').textContent = "BPM value:" + bpmValue;
+
+
+
+                                google.charts.load('current', { packages: ['corechart'] });
+                                google.charts.setOnLoadCallback(drawChart);
+
+                                function drawChart() {
+
+                                    // Set Data
+                                    const data = google.visualization.arrayToDataTable([
+                                        ['Price', 'Size'],
+                                        [50, 7], [60, 8], [70, 8], [80, 9], [90, 9],
+                                        [100, 9], [110, 10], [120, 11],
+                                        [130, 14], [140, 14], [150, 15]
+                                    ]);
+
+                                    // Set Options
+                                    const options = {
+                                        title: 'House Prices vs. Size',
+                                        hAxis: { title: 'Square Meters' },
+                                        vAxis: { title: 'Price in Millions' },
+                                        legend: 'none'
+                                    };
+
+                                    // Draw
+                                    const chart = new google.visualization.LineChart(document.getElementById('myChart'));
+                                    chart.draw(data, options);
+
+
+
+                                }
+                            } else {
+                                console.log("BPM value not found.");
+                            }
+                        }
+                    });
+
+                    // Start notifications for the characteristic to enable listening.
+                    return characteristic.startNotifications();
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+
+        });
+    </script>
+</body>
+
+</html>
