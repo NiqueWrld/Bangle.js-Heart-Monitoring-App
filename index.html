@@ -12,8 +12,32 @@
 <body>
     <button>Search</button>
     <div id="receivedData"></div>
-    <div id="myChart" style="width:100%; max-width:600px; height:500px;"></div>
+
+    <div id="myChart" style="width:100%; height:600px;"></div>
+
     <script>
+
+        google.charts.load('current', { packages: ['corechart'] });
+        google.charts.setOnLoadCallback(drawChart);
+
+        let chartData = [
+            ['Blood Pressure', 'Seconds']
+        ];
+
+        const options = {
+            title: 'Heart Rate Monitor',
+            hAxis: { title: 'Seconds' },
+            vAxis: { title: 'Blood Pressure' },
+            legend: 'none'
+        };
+
+        function drawChart() {
+            const chart = new google.visualization.LineChart(document.getElementById('myChart'));
+            chart.draw(google.visualization.arrayToDataTable(chartData), options);
+        }
+
+        var seconds = 0;
+
         var NORDIC_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
         var NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 
@@ -26,6 +50,7 @@
                 .then(device => {
                     // Human-readable name of the device.
                     console.log(device.name);
+                    document.querySelector("button").style.display = "none";
 
                     // Attempts to connect to remote GATT Server.
                     return device.gatt.connect();
@@ -52,38 +77,18 @@
                             if (match && match.length > 1) {
                                 var bpmValue = match[1];
                                 console.log("BPM value:", bpmValue);
-                                document.getElementById('receivedData').textContent = "BPM value:" + bpmValue;
 
+                                chartData.push([parseFloat(seconds), parseFloat(bpmValue)]);
+                                drawChart();
 
-
-                                google.charts.load('current', { packages: ['corechart'] });
-                                google.charts.setOnLoadCallback(drawChart);
-
-                                function drawChart() {
-
-                                    // Set Data
-                                    const data = google.visualization.arrayToDataTable([
-                                        ['Price', 'Size'],
-                                        [50, 7], [60, 8], [70, 8], [80, 9], [90, 9],
-                                        [100, 9], [110, 10], [120, 11],
-                                        [130, 14], [140, 14], [150, 15]
-                                    ]);
-
-                                    // Set Options
-                                    const options = {
-                                        title: 'House Prices vs. Size',
-                                        hAxis: { title: 'Square Meters' },
-                                        vAxis: { title: 'Price in Millions' },
-                                        legend: 'none'
-                                    };
-
-                                    // Draw
-                                    const chart = new google.visualization.LineChart(document.getElementById('myChart'));
-                                    chart.draw(data, options);
-
-
-
+                                if(bpmValue > 100){
+                                    document.querySelector("body").style.background = "red";
                                 }
+                                else{
+                                    document.querySelector("body").style.background = "white";
+                                }
+
+                                seconds++;
                             } else {
                                 console.log("BPM value not found.");
                             }
@@ -99,6 +104,7 @@
 
         });
     </script>
+
 </body>
 
 </html>
